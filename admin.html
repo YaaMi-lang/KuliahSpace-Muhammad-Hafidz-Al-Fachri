@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin | KuliahSpace</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <span class="brand-icon">K</span>
+      <span>KuliahSpace</span>
+    </a>
+    <nav class="navigation">
+      <a class="nav-link" href="index.html">Beranda</a>
+      <a class="nav-link" href="materi.html">Materi</a>
+      <a class="nav-link" href="tugas.html">Tugas</a>
+      <a class="nav-link active" href="admin.html">Admin</a>
+    </nav>
+  </header>
+
+  <main class="container page-content">
+    <section class="page-heading">
+      <span class="eyebrow">PENGELOLAAN WEBSITE</span>
+      <h1>Panel Admin</h1>
+      <p>Masuk untuk mengelola materi dan tugas KuliahSpace.</p>
+    </section>
+
+    <section id="login-panel" class="content-panel narrow-panel">
+      <h2>Login Admin</h2>
+      <p>Gunakan akun admin yang sudah terdaftar di Supabase.</p>
+      <form id="login-form" class="form-stack">
+        <label for="admin-email">Email</label>
+        <input id="admin-email" type="email" autocomplete="username"
+          placeholder="Email admin" required>
+
+        <label for="admin-password">Password</label>
+        <input id="admin-password" type="password"
+          autocomplete="current-password" placeholder="Password" required>
+
+        <button class="button primary" type="submit">Masuk</button>
+      </form>
+      <p id="login-status" class="status-message" role="status"></p>
+    </section>
+
+    <section id="admin-section" class="admin-layout hidden">
+      <div class="admin-toolbar">
+        <div>
+          <span class="eyebrow">MODE ADMIN</span>
+          <h2>Kelola Dokumen</h2>
+          <p id="admin-user-label"></p>
+        </div>
+        <button id="logout-button" class="button secondary" type="button">
+          Keluar
+        </button>
+      </div>
+
+      <section class="content-panel">
+        <h2>Upload Materi atau Tugas</h2>
+        <p>File maksimal 25 MB. Pastikan kategori dokumen sudah benar.</p>
+
+        <form id="upload-form" class="form-stack">
+          <label for="resource-title">Judul dokumen</label>
+          <input id="resource-title" type="text" required
+            placeholder="Contoh: Materi Pertemuan 1">
+
+          <label for="resource-course">Mata kuliah</label>
+          <input id="resource-course" type="text" required
+            placeholder="Contoh: Pemrograman Web">
+
+          <label for="resource-type">Jenis dokumen</label>
+          <select id="resource-type" required>
+            <option value="Materi">Materi</option>
+            <option value="Tugas">Tugas</option>
+          </select>
+
+          <label for="resource-description">Deskripsi (opsional)</label>
+          <textarea id="resource-description" rows="3"
+            placeholder="Keterangan singkat dokumen"></textarea>
+
+          <label for="resource-file">Pilih file</label>
+          <input id="resource-file" type="file" required>
+
+          <button class="button primary" type="submit">Upload Dokumen</button>
+        </form>
+        <p id="upload-status" class="status-message" role="status"></p>
+      </section>
+
+      <section class="content-panel">
+        <div class="list-heading">
+          <div>
+            <h2>Dokumen Terunggah</h2>
+            <p>Daftar dokumen yang dapat dikelola oleh admin.</p>
+          </div>
+          <button id="refresh-admin" class="button secondary" type="button">
+            Muat ulang
+          </button>
+        </div>
+        <div id="admin-resource-list" class="resource-grid"></div>
+        <p id="admin-resource-status" class="status-message" role="status"></p>
+      </section>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>© <span class="current-year"></span> KuliahSpace.</p>
+  </footer>
+</body>
+</html>
