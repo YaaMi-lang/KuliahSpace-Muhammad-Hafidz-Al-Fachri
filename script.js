@@ -1,134 +1,108 @@
 
+"use strict";
+
+// Konfigurasi project Supabase KuliahSpace.
 const SUPABASE_URL = "https://yzpuwhrxatteahtkjruk.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY =
-  "sb_publishable_TbCxko3x695wX1Lz0YTC1Q_dFBzKe5K";
-
+const SUPABASE_KEY = "sb_publishable_TbCxko3x695wX1Lz0YTC1Q_dFBzKe5K";
 const ADMIN_UID = "c39ae790-cc7b-4884-89a2-65879e5201e8";
-const BUCKET_NAME = "kuliahspace-files";
+const BUCKET = "kuliahspace-files";
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
-const db = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_PUBLISHABLE_KEY
-);
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let resourcesCache = [];
+let authCheckPromise = null;
 
 const $ = (selector) => document.querySelector(selector);
 
-let resources = [];
-let currentUser = null;
-let toastTimeout;
-
-const allowedExtensions = [
-  "pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx",
-  "txt", "zip", "jpg", "jpeg", "png"
-];
-
-const allowedMimeTypes = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "text/plain",
-  "application/zip",
-  "application/x-zip-compressed",
-  "image/jpeg",
-  "image/png"
-];
-
-function escapeHTML(value = "") {
-  return String(value).replace(/[&<>"']/g, (character) => {
-    const entities = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    };
-
-    return entities[character];
-  });
-}
-
-function showToast(message, isError = false) {
-  const toast = $("#toast");
-
-  toast.textContent = message;
-  toast.classList.toggle("error", isError);
-  toast.classList.add("show");
-
-  clearTimeout(toastTimeout);
-
-  toastTimeout = setTimeout(() => {
-    toast.classList.remove("show");
-  }, 3500);
-}
-
-function setStatus(selector, message, isError = false) {
+function setStatus(selector, message, type = "") {
   const element = $(selector);
+  if (!element) return;
 
   element.textContent = message;
-  element.style.color = isError ? "#f87171" : "";
+  element.classList.remove("error", "success");
+
+  if (type) element.classList.add(type);
 }
 
-function formatDate(dateString) {
-  if (!dateString) return "-";
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
 
-  return new Date(dateString).toLocaleDateString("id-ID", {
+function formatDate(value) {
+  if (!value) return "Tanggal tidak tersedia";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Tanggal tidak tersedia";
+
+  return date.toLocaleDateString("id-ID", {
     day: "numeric",
     month: "short",
     year: "numeric"
   });
 }
 
-function getFileExtension(filename = "") {
-  const parts = filename.split(".");
-  return parts.length > 1 ? parts.pop().toLowerCase() : "";
+function getPublicFileUrl(path) {
+  const { data } = db.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
 }
 
-function getFileIcon(filename = "") {
-  const extension = getFileExtension(filename);
+function getCurrentPage() {
+  const file = location.pathname.split("/").pop().toLowerCase();
 
-  if (["pdf"].includes(extension)) return "PDF";
-  if (["doc", "docx"].includes(extension)) return "DOC";
-  if (["ppt", "pptx"].includes(extension)) return "PPT";
-  if (["xls", "xlsx"].includes(extension)) return "XLS";
-  if (["zip"].includes(extension)) return "ZIP";
-  if (["jpg", "jpeg", "png"].includes(extension)) return "IMG";
-
-  return "TXT";
+  if (file === "materi.html") return "Materi";
+  if (file === "tugas.html") return "Tugas";
+  if (file === "admin.html") return "Admin";
+  return "Beranda";
 }
 
-function getPublicFileUrl(filePath) {
-  const result = db.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(filePath);
+function renderResourceCard(resource, adminMode = false) {
+  const title = escapeHTML(resource.title);
+  const course = escapeHTML(resource.course);
+  const description = escapeHTML(resource.description || "Tidak ada deskripsi.");
+  const type = escapeHTML(resource.resource_type);
+  const filename = escapeHTML(resource.original_filename);
+  const url = getPublicFileUrl(resource.file_path);
 
-  return result.data.publicUrl;
-}
-
-function isAdmin() {
-  return Boolean(currentUser && currentUser.id === ADMIN_UID);
-}
-
-function updateAdminInterface() {
-  const adminSection = $("#admin-section");
-  const adminButton = $("#open-admin");
-
-  adminSection.classList.toggle("hidden", !isAdmin());
-
-  adminButton.textContent = isAdmin() ? "Panel Admin" : "Login Admin";
-
-  if (isAdmin()) {
-    renderAdminResources();
-  } else {
-    $("#admin-resource-list").replaceChildren();
-  }
+  return `
+    <article class="resource-card">
+      <span class="resource-type">${type}</span>
+      <h3>${title}</h3>
+      <p class="resource-meta">Mata kuliah: ${course}</p>
+      <p>${description}</p>
+      <p class="resource-meta">
+        File: ${filename}<br>
+        Diunggah: ${formatDate(resource.uploaded_at)}
+      </p>
+      <a class="button primary"
+         href="${escapeHTML(url)}"
+         target="_blank"
+         rel="noopener noreferrer">
+        Unduh / Buka File
+      </a>
+      ${
+        adminMode
+          ? `<div class="admin-resource-actions">
+               <button class="button secondary delete-resource"
+                 type="button" data-id="${Number(resource.id)}">
+                 Hapus Dokumen
+               </button>
+             </div>`
+          : ""
+      }
+    </article>
+  `;
 }
 
 async function loadResources() {
-  setStatus("#resource-status", "Memuat daftar dokumen...");
+  const page = getCurrentPage();
 
   const { data, error } = await db
     .from("resources")
@@ -136,187 +110,126 @@ async function loadResources() {
     .order("uploaded_at", { ascending: false });
 
   if (error) {
-    console.error("Gagal memuat dokumen:", error);
-    setStatus(
-      "#resource-status",
-      "Gagal memuat dokumen. Periksa koneksi Supabase dan pengaturan tabel.",
-      true
-    );
-    $("#resource-list").replaceChildren();
-    $("#total-resources").textContent = "0";
+    console.error("Gagal memuat resources:", error);
+
+    setStatus("#resource-status",
+      "Materi atau tugas belum dapat dimuat. Silakan coba lagi.", "error");
+    setStatus("#admin-resource-status",
+      "Daftar dokumen gagal dimuat. Periksa koneksi dan izin database.", "error");
+    setStatus("#home-status",
+      "Ringkasan belum dapat dimuat dari database.", "error");
+
     return;
   }
 
-  resources = data || [];
+  resourcesCache = data || [];
 
-  $("#total-resources").textContent = resources.length;
-  updateCourseOptions();
-  renderResources();
-  renderAdminResources();
-}
+  // Ringkasan di Beranda.
+  const materialCount = $("#home-material-count");
+  const taskCount = $("#home-task-count");
 
-function updateCourseOptions() {
-  const select = $("#course-filter");
-  const selectedValue = select.value;
+  if (materialCount) {
+    materialCount.textContent = resourcesCache.filter(
+      item => item.resource_type === "Materi"
+    ).length;
+  }
 
-  const courses = [...new Set(
-    resources
-      .map((resource) => resource.course)
-      .filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b, "id"));
+  if (taskCount) {
+    taskCount.textContent = resourcesCache.filter(
+      item => item.resource_type === "Tugas"
+    ).length;
+  }
 
-  select.innerHTML = '<option value="">Semua mata kuliah</option>';
+  if ($("#home-status")) {
+    setStatus("#home-status", "Data berhasil diperbarui.", "success");
+  }
 
-  courses.forEach((course) => {
-    const option = document.createElement("option");
-    option.value = course;
-    option.textContent = course;
-    select.appendChild(option);
-  });
+  // Halaman Materi dan Tugas.
+  if (page === "Materi" || page === "Tugas") {
+    renderPublicResources();
+  }
 
-  if (courses.includes(selectedValue)) {
-    select.value = selectedValue;
+  // Halaman Admin.
+  if (page === "Admin" && currentUser?.id === ADMIN_UID) {
+    renderAdminResources();
   }
 }
 
-function renderResources() {
-  const container = $("#resource-list");
-  const searchTerm = $("#search-input").value.trim().toLowerCase();
-  const selectedType = $("#type-filter").value;
-  const selectedCourse = $("#course-filter").value;
+function renderPublicResources() {
+  const list = $("#resource-list");
+  if (!list) return;
 
-  const filteredResources = resources.filter((resource) => {
-    const searchableText = [
-      resource.title,
-      resource.course,
-      resource.description,
-      resource.original_filename
+  const page = getCurrentPage();
+  const search = ($("#resource-search")?.value || "").trim().toLowerCase();
+
+  const filtered = resourcesCache.filter((item) => {
+    const correctType = item.resource_type === page;
+    const searchable = [
+      item.title,
+      item.course,
+      item.description,
+      item.original_filename
     ].join(" ").toLowerCase();
 
-    const matchesSearch = searchableText.includes(searchTerm);
-    const matchesType = !selectedType ||
-      resource.resource_type === selectedType;
-    const matchesCourse = !selectedCourse ||
-      resource.course === selectedCourse;
-
-    return matchesSearch && matchesType && matchesCourse;
+    return correctType && searchable.includes(search);
   });
 
-  if (filteredResources.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <strong>Belum ada dokumen yang cocok</strong>
-        <span>Coba kata kunci atau filter yang berbeda.</span>
-      </div>
-    `;
+  const count = $("#resource-count");
+  if (count) count.textContent = `${filtered.length} dokumen ditemukan`;
 
+  if (filtered.length === 0) {
+    list.innerHTML = "";
     setStatus(
       "#resource-status",
-      resources.length === 0
-        ? "Belum ada materi atau tugas yang diunggah."
-        : `${filteredResources.length} dokumen ditemukan.`
+      search
+        ? "Tidak ada dokumen yang cocok dengan pencarian."
+        : `Belum ada ${page.toLowerCase()} yang tersedia.`,
+      ""
     );
-
     return;
   }
 
-  setStatus(
-    "#resource-status",
-    `Menampilkan ${filteredResources.length} dari ${resources.length} dokumen.`
-  );
-
-  container.innerHTML = filteredResources.map((resource) => {
-    const fileUrl = getPublicFileUrl(resource.file_path);
-    const typeClass = resource.resource_type === "Tugas"
-      ? "assignment"
-      : "";
-
-    return `
-      <article class="resource-card">
-        <div class="resource-card-top">
-          <span class="file-icon">${escapeHTML(
-            getFileIcon(resource.original_filename)
-          )}</span>
-          <span class="type-tag ${typeClass}">
-            ${escapeHTML(resource.resource_type)}
-          </span>
-        </div>
-
-        <h3>${escapeHTML(resource.title)}</h3>
-        <p class="resource-course">${escapeHTML(resource.course)}</p>
-
-        <p class="resource-description">${
-          escapeHTML(resource.description || "Tidak ada deskripsi.")
-        }</p>
-
-        <p class="resource-meta">
-          ${escapeHTML(resource.original_filename)} ·
-          ${escapeHTML(formatDate(resource.uploaded_at))}
-        </p>
-
-        <a
-          class="download-link"
-          href="${escapeHTML(fileUrl)}"
-          target="_blank"
-          rel="noopener noreferrer"
-          download
-        >
-          ↓ Lihat / Unduh Dokumen
-        </a>
-      </article>
-    `;
-  }).join("");
+  setStatus("#resource-status", "");
+  list.innerHTML = filtered.map(item => renderResourceCard(item)).join("");
 }
 
 function renderAdminResources() {
-  const container = $("#admin-resource-list");
+  const list = $("#admin-resource-list");
+  if (!list) return;
 
-  if (!isAdmin()) {
-    container.replaceChildren();
+  if (!resourcesCache.length) {
+    list.innerHTML = "";
+    setStatus("#admin-resource-status", "Belum ada dokumen yang diunggah.");
     return;
   }
 
-  if (resources.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <strong>Belum ada dokumen</strong>
-        <span>Dokumen yang kamu unggah akan muncul di sini.</span>
-      </div>
-    `;
-    return;
-  }
+  setStatus("#admin-resource-status", "");
+  list.innerHTML = resourcesCache
+    .map(item => renderResourceCard(item, true))
+    .join("");
 
-  container.innerHTML = resources.map((resource) => `
-    <div class="admin-resource-row">
-      <div>
-        <h4>${escapeHTML(resource.title)}</h4>
-        <p>
-          ${escapeHTML(resource.course)} ·
-          ${escapeHTML(resource.resource_type)}
-        </p>
-      </div>
-
-      <button
-        class="delete-button"
-        type="button"
-        data-delete-id="${Number(resource.id)}"
-      >
-        Hapus
-      </button>
-    </div>
-  `).join("");
+  list.querySelectorAll(".delete-resource").forEach((button) => {
+    button.addEventListener("click", () => {
+      deleteResource(Number(button.dataset.id));
+    });
+  });
 }
 
 async function handleLogin(event) {
   event.preventDefault();
 
-  const email = $("#admin-email").value.trim();
-  const password = $("#admin-password").value;
-  const button = $("#login-button");
+  const email = $("#admin-email")?.value.trim();
+  const password = $("#admin-password")?.value;
 
-  button.disabled = true;
-  button.textContent = "Memeriksa...";
-  setStatus("#login-status", "");
+  if (!email || !password) {
+    setStatus("#login-status", "Email dan password wajib diisi.", "error");
+    return;
+  }
+
+  const submitButton = $("#login-form button[type='submit']");
+  if (submitButton) submitButton.disabled = true;
+
+  setStatus("#login-status", "Sedang memeriksa akun...");
 
   try {
     const { data, error } = await db.auth.signInWithPassword({
@@ -326,93 +239,60 @@ async function handleLogin(event) {
 
     if (error) throw error;
 
-    currentUser = data.user;
-
-    if (!isAdmin()) {
+    if (data.user?.id !== ADMIN_UID) {
       await db.auth.signOut();
       currentUser = null;
-
-      throw new Error("Akun ini tidak memiliki akses admin KuliahSpace.");
+      throw new Error("Akun ini tidak memiliki akses admin.");
     }
 
-    $("#login-dialog").close();
-    $("#login-form").reset();
-
-    updateAdminInterface();
-    showToast("Login admin berhasil!");
-
-    $("#admin-section").scrollIntoView({ behavior: "smooth" });
+    currentUser = data.user;
+    await updateAdminInterface();
   } catch (error) {
     console.error("Login gagal:", error);
-    setStatus(
-      "#login-status",
-      error.message || "Login gagal. Periksa email dan password.",
-      true
-    );
+    setStatus("#login-status", error.message || "Login gagal.", "error");
   } finally {
-    button.disabled = false;
-    button.textContent = "Masuk";
+    if (submitButton) submitButton.disabled = false;
   }
 }
 
-async function handleLogout() {
-  const { error } = await db.auth.signOut();
+async function updateAdminInterface() {
+  const loginPanel = $("#login-panel");
+  const adminSection = $("#admin-section");
 
-  if (error) {
-    showToast("Gagal keluar. Silakan coba lagi.", true);
-    return;
+  if (!loginPanel || !adminSection) return;
+
+  if (currentUser?.id === ADMIN_UID) {
+    loginPanel.classList.add("hidden");
+    adminSection.classList.remove("hidden");
+
+    const userLabel = $("#admin-user-label");
+    if (userLabel) userLabel.textContent = `Login sebagai ${currentUser.email || "Admin"}`;
+
+    setStatus("#login-status", "");
+    await loadResources();
+  } else {
+    adminSection.classList.add("hidden");
+    loginPanel.classList.remove("hidden");
   }
+}
 
-  currentUser = null;
-  updateAdminInterface();
-  showToast("Kamu sudah keluar dari panel admin.");
+function safeFilename(filename) {
+  // Hindari path folder yang tidak diinginkan dalam nama file.
+  const cleaned = filename
+    .normalize("NFKC")
+    .replace(/[\\/]/g, "_")
+    .replace(/[^\w.\- ()]/g, "_")
+    .trim()
+    .slice(0, 150);
+
+  return cleaned || "dokumen";
 }
 
 async function handleUpload(event) {
   event.preventDefault();
 
-  if (!isAdmin()) {
-    showToast("Silakan login sebagai admin terlebih dahulu.", true);
-    return;
-  }
-
-  const form = $("#upload-form");
-  const submitButton = $("#upload-button");
-  const fileInput = $("#resource-file");
-  const file = fileInput.files[0];
-
-  if (!file) {
-    setStatus("#upload-status", "Pilih file terlebih dahulu.", true);
-    return;
-  }
-
-  const extension = getFileExtension(file.name);
-
-  if (!allowedExtensions.includes(extension)) {
-    setStatus(
-      "#upload-status",
-      "Format file tidak didukung. Gunakan PDF, Office, TXT, ZIP, JPG, atau PNG.",
-      true
-    );
-    return;
-  }
-
-  if (file.type && !allowedMimeTypes.includes(file.type)) {
-    setStatus(
-      "#upload-status",
-      "Tipe file tidak didukung. Periksa format file yang dipilih.",
-      true
-    );
-    return;
-  }
-
-  // Batas awal 25 MB agar proses upload lebih mudah dikelola.
-  if (file.size > 25 * 1024 * 1024) {
-    setStatus(
-      "#upload-status",
-      "Ukuran file terlalu besar. Batas upload website ini 25 MB.",
-      true
-    );
+  if (currentUser?.id !== ADMIN_UID) {
+    setStatus("#upload-status", "Kamu tidak memiliki akses admin.", "error");
     return;
   }
 
@@ -420,191 +300,193 @@ async function handleUpload(event) {
   const course = $("#resource-course").value.trim();
   const resourceType = $("#resource-type").value;
   const description = $("#resource-description").value.trim();
+  const file = $("#resource-file").files[0];
 
-  const safeFilename = file.name
-    .normalize("NFKD")
-    .replace(/[^\w.-]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-
-  const filePath = `${currentUser.id}/${Date.now()}-${safeFilename}`;
-
-  submitButton.disabled = true;
-  submitButton.textContent = "Mengunggah...";
-  setStatus("#upload-status", "Mengunggah file ke penyimpanan...");
-
-  let uploadedFilePath = null;
-
-  try {
-    const { error: uploadError } = await db.storage
-      .from(BUCKET_NAME)
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: file.type || undefined
-      });
-
-    if (uploadError) throw uploadError;
-
-    uploadedFilePath = filePath;
-
-    setStatus("#upload-status", "Menyimpan informasi dokumen...");
-
-    const { error: insertError } = await db
-      .from("resources")
-      .insert({
-        title,
-        course,
-        resource_type: resourceType,
-        description: description || null,
-        file_path: filePath,
-        original_filename: file.name
-      });
-
-    if (insertError) throw insertError;
-
-    form.reset();
-    setStatus("#upload-status", "Dokumen berhasil diunggah!");
-    showToast("Dokumen berhasil ditambahkan.");
-
-    await loadResources();
-  } catch (error) {
-    console.error("Upload gagal:", error);
-
-    // Jika metadata gagal disimpan, coba hapus file yang sudah diunggah.
-    if (uploadedFilePath) {
-      const { error: cleanupError } = await db.storage
-        .from(BUCKET_NAME)
-        .remove([uploadedFilePath]);
-
-      if (cleanupError) {
-        console.error("Gagal membersihkan file:", cleanupError);
-      }
-    }
-
-    setStatus(
-      "#upload-status",
-      error.message || "Upload gagal. Periksa konfigurasi Supabase.",
-      true
-    );
-  } finally {
-    submitButton.disabled = false;
-    submitButton.textContent = "↑ Unggah Dokumen";
-  }
-}
-
-async function handleDelete(event) {
-  const button = event.target.closest("[data-delete-id]");
-
-  if (!button || !isAdmin()) return;
-
-  const resourceId = Number(button.dataset.deleteId);
-  const resource = resources.find((item) => Number(item.id) === resourceId);
-
-  if (!resource) {
-    showToast("Dokumen tidak ditemukan.", true);
+  if (!title || !course || !file) {
+    setStatus("#upload-status", "Lengkapi judul, mata kuliah, dan file.", "error");
     return;
   }
 
+  if (!["Materi", "Tugas"].includes(resourceType)) {
+    setStatus("#upload-status", "Jenis dokumen tidak valid.", "error");
+    return;
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    setStatus("#upload-status", "Ukuran file maksimal 25 MB.", "error");
+    return;
+  }
+
+  if (file.size === 0) {
+    setStatus("#upload-status", "File kosong tidak dapat diunggah.", "error");
+    return;
+  }
+
+  const submitButton = $("#upload-form button[type='submit']");
+  if (submitButton) submitButton.disabled = true;
+
+  const path = `${currentUser.id}/${Date.now()}-${safeFilename(file.name)}`;
+
+  setStatus("#upload-status", "Mengunggah file...");
+
+  let uploaded = false;
+
+  try {
+    const { error: uploadError } = await db.storage
+      .from(BUCKET)
+      .upload(path, file, {
+        upsert: false,
+        contentType: file.type || "application/octet-stream"
+      });
+
+    if (uploadError) throw uploadError;
+    uploaded = true;
+
+    const { error: insertError } = await db.from("resources").insert({
+      title,
+      course,
+      resource_type: resourceType,
+      description: description || null,
+      file_path: path,
+      original_filename: file.name
+    });
+
+    if (insertError) {
+      // Bersihkan objek jika metadata gagal disimpan.
+      const { error: cleanupError } = await db.storage.from(BUCKET).remove([path]);
+      if (cleanupError) {
+        console.error("File yatim perlu dibersihkan:", cleanupError);
+      }
+      uploaded = false;
+      throw insertError;
+    }
+
+    $("#upload-form").reset();
+    setStatus("#upload-status", "Dokumen berhasil diunggah!", "success");
+    await loadResources();
+  } catch (error) {
+    console.error("Upload gagal:", error);
+    setStatus("#upload-status",
+      error.message || "Upload gagal. Periksa koneksi atau izin Supabase.", "error");
+  } finally {
+    if (submitButton) submitButton.disabled = false;
+  }
+}
+
+async function deleteResource(id) {
+  if (currentUser?.id !== ADMIN_UID) {
+    setStatus("#admin-resource-status", "Akses admin diperlukan.", "error");
+    return;
+  }
+
+  const resource = resourcesCache.find(item => Number(item.id) === id);
+  if (!resource) return;
+
   const confirmed = window.confirm(
-    `Hapus "${resource.title}"?\n\nFile dan informasi dokumen akan dihapus.`
+    `Hapus dokumen "${resource.title}"? Tindakan ini tidak dapat dibatalkan.`
   );
 
   if (!confirmed) return;
 
-  button.disabled = true;
-  button.textContent = "Menghapus...";
+  setStatus("#admin-resource-status", "Menghapus dokumen...");
 
   try {
-    // Hapus metadata lebih dahulu agar file tetap ada jika query gagal.
-    const { error: deleteRowError } = await db
-      .from("resources")
-      .delete()
-      .eq("id", resourceId);
-
-    if (deleteRowError) throw deleteRowError;
-
-    const { error: deleteFileError } = await db.storage
-      .from(BUCKET_NAME)
+    // Hapus objek Storage terlebih dahulu.
+    const { error: storageError } = await db.storage
+      .from(BUCKET)
       .remove([resource.file_path]);
 
-    if (deleteFileError) {
-      console.error("File storage belum terhapus:", deleteFileError);
-      showToast(
-        "Data dokumen dihapus, tetapi file penyimpanan gagal dihapus. Periksa Storage.",
-        true
+    if (storageError) throw storageError;
+
+    const { error: databaseError } = await db
+      .from("resources")
+      .delete()
+      .eq("id", id);
+
+    if (databaseError) {
+      console.error(
+        "File sudah dihapus dari Storage tetapi metadata belum terhapus.",
+        databaseError
       );
-    } else {
-      showToast("Dokumen berhasil dihapus.");
+      throw new Error(
+        "File Storage terhapus, tetapi metadata gagal dihapus. Periksa policy database."
+      );
     }
 
+    setStatus("#admin-resource-status", "Dokumen berhasil dihapus.", "success");
     await loadResources();
   } catch (error) {
     console.error("Penghapusan gagal:", error);
-    showToast(error.message || "Gagal menghapus dokumen.", true);
-    await loadResources();
+    setStatus("#admin-resource-status",
+      error.message || "Dokumen gagal dihapus.", "error");
   }
 }
 
-function connectInterface() {
-  $("#current-year").textContent = new Date().getFullYear();
+async function handleLogout() {
+  const { error } = await db.auth.signOut();
 
-  $("#search-input").addEventListener("input", renderResources);
-  $("#type-filter").addEventListener("change", renderResources);
-  $("#course-filter").addEventListener("change", renderResources);
+  if (error) {
+    setStatus("#login-status", "Gagal keluar: " + error.message, "error");
+    return;
+  }
 
-  $("#open-admin").addEventListener("click", () => {
-    if (isAdmin()) {
-      $("#admin-section").scrollIntoView({ behavior: "smooth" });
-    } else {
-      $("#login-dialog").showModal();
-    }
-  });
-
-  $("#close-login").addEventListener("click", () => {
-    $("#login-dialog").close();
-  });
-
-  $("#login-dialog").addEventListener("click", (event) => {
-    if (event.target === $("#login-dialog")) {
-      $("#login-dialog").close();
-    }
-  });
-
-  $("#login-form").addEventListener("submit", handleLogin);
-  $("#logout-button").addEventListener("click", handleLogout);
-  $("#upload-form").addEventListener("submit", handleUpload);
-  $("#admin-resource-list").addEventListener("click", handleDelete);
+  currentUser = null;
+  resourcesCache = [];
+  await updateAdminInterface();
+  setStatus("#login-status", "Kamu sudah keluar dari akun admin.", "success");
 }
 
 async function initialize() {
-  connectInterface();
+  document.querySelectorAll(".current-year").forEach((element) => {
+    element.textContent = new Date().getFullYear();
+  });
 
+  // Halaman publik bisa membaca resources tanpa login.
+  await loadResources();
+
+  // Cari sesi login yang masih aktif.
   const { data, error } = await db.auth.getSession();
 
   if (error) {
-    console.error("Gagal memeriksa sesi:", error);
+    console.error("Gagal membaca sesi:", error);
   }
 
   currentUser = data?.session?.user || null;
 
-  if (currentUser && !isAdmin()) {
-    await db.auth.signOut();
-    currentUser = null;
-  }
-
-  updateAdminInterface();
-  await loadResources();
-
-  db.auth.onAuthStateChange((_event, session) => {
-    currentUser = session?.user || null;
-
+  if (getCurrentPage() === "Admin") {
     if (currentUser && currentUser.id !== ADMIN_UID) {
-      db.auth.signOut();
+      await db.auth.signOut();
       currentUser = null;
     }
+    await updateAdminInterface();
+  }
 
-    updateAdminInterface();
+  // Sinkronkan UI saat sesi berubah.
+  db.auth.onAuthStateChange((event, session) => {
+    currentUser = session?.user || null;
+
+    if (getCurrentPage() === "Admin") {
+      if (currentUser && currentUser.id !== ADMIN_UID) {
+        currentUser = null;
+        db.auth.signOut().catch(console.error);
+      }
+
+      // Jadwalkan pekerjaan async setelah callback auth selesai.
+      Promise.resolve().then(() => updateAdminInterface());
+    }
   });
 }
 
-initialize();
+document.addEventListener("DOMContentLoaded", () => {
+  $("#resource-search")?.addEventListener("input", renderPublicResources);
+  $("#login-form")?.addEventListener("submit", handleLogin);
+  $("#upload-form")?.addEventListener("submit", handleUpload);
+  $("#logout-button")?.addEventListener("click", handleLogout);
+  $("#refresh-admin")?.addEventListener("click", loadResources);
+
+  initialize().catch((error) => {
+    console.error("Inisialisasi KuliahSpace gagal:", error);
+    setStatus("#resource-status", "Website gagal memuat data.", "error");
+    setStatus("#login-status", "Gagal menginisialisasi halaman.", "error");
+  });
+});
