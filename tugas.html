@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tugas Kuliah | KuliahSpace</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <span class="brand-icon">K</span>
+      <span>KuliahSpace</span>
+    </a>
+    <nav class="navigation">
+      <a class="nav-link" href="index.html">Beranda</a>
+      <a class="nav-link" href="materi.html">Materi</a>
+      <a class="nav-link active" href="tugas.html">Tugas</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+    </nav>
+  </header>
+
+  <main class="container page-content">
+    <section class="page-heading">
+      <span class="eyebrow">PUSAT TUGAS</span>
+      <h1>Tugas Kuliah</h1>
+      <p>Temukan dan unduh dokumen tugas yang tersedia.</p>
+    </section>
+
+    <section class="content-panel">
+      <div class="search-row">
+        <input id="resource-search" type="search"
+          placeholder="Cari nama tugas, mata kuliah, atau deskripsi..."
+          aria-label="Cari tugas">
+      </div>
+
+      <div class="list-heading">
+        <div>
+          <h2>Daftar Tugas</h2>
+          <p id="resource-count">Memuat tugas...</p>
+        </div>
+      </div>
+
+      <div id="resource-list" class="resource-grid"></div>
+      <p id="resource-status" class="status-message" role="status"></p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>© <span class="current-year"></span> KuliahSpace.</p>
+  </footer>
+</body>
+</html>
