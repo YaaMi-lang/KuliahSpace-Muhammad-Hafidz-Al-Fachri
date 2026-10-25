@@ -88,15 +88,20 @@ function renderResourceCard(resource, adminMode = false) {
         Unduh / Buka File
       </a>
       ${
-        adminMode
-          ? `<div class="admin-resource-actions">
-               <button class="button secondary delete-resource"
-                 type="button" data-id="${Number(resource.id)}">
-                 Hapus Dokumen
-               </button>
-             </div>`
-          : ""
-      }
+  adminMode
+    ? `<div class="admin-resource-actions">
+         <button class="button primary edit-resource"
+           type="button" data-id="${Number(resource.id)}">
+           Edit Dokumen
+         </button>
+
+         <button class="button secondary delete-resource"
+           type="button" data-id="${Number(resource.id)}">
+           Hapus Dokumen
+         </button>
+       </div>`
+    : ""
+}
     </article>
   `;
 }
@@ -193,6 +198,7 @@ function renderPublicResources() {
   list.innerHTML = filtered.map(item => renderResourceCard(item)).join("");
 }
 
+
 function renderAdminResources() {
   const list = $("#admin-resource-list");
   if (!list) return;
@@ -204,16 +210,24 @@ function renderAdminResources() {
   }
 
   setStatus("#admin-resource-status", "");
+
   list.innerHTML = resourcesCache
     .map(item => renderResourceCard(item, true))
     .join("");
 
-  list.querySelectorAll(".delete-resource").forEach((button) => {
+  list.querySelectorAll(".edit-resource").forEach(button => {
+    button.addEventListener("click", () => {
+      openEditDialog(Number(button.dataset.id));
+    });
+  });
+
+  list.querySelectorAll(".delete-resource").forEach(button => {
     button.addEventListener("click", () => {
       deleteResource(Number(button.dataset.id));
     });
   });
 }
+
 
 async function handleLogin(event) {
   event.preventDefault();
@@ -373,13 +387,240 @@ async function handleUpload(event) {
   }
 }
 
-async function deleteResource(id) {
+function openEditDialog(id) {
   if (currentUser?.id !== ADMIN_UID) {
     setStatus("#admin-resource-status", "Akses admin diperlukan.", "error");
     return;
   }
 
-  const resource = resourcesCache.find(item => Number(item.id) === id);
+  const resource = resourcesCache.find(
+    item => Number(item.id) === Number(id)
+  );
+
+  if (!resource) return;
+
+  // Buat dialog jika belum tersedia.
+  let dialog = document.querySelector("#edit-resource-dialog");
+
+  if (!dialog) {
+    dialog = document.createElement("dialog");
+    dialog.id = "edit-resource-dialog";
+
+    dialog.style.width = "min(560px, calc(100% - 32px))";
+    dialog.style.maxHeight = "85vh";
+    dialog.style.overflowY = "auto";
+    dialog.style.border = "1px solid #ddd";
+    dialog.style.borderRadius = "14px";
+    dialog.style.padding = "24px";
+
+    document.body.appendChild(dialog);
+  }
+
+  dialog.innerHTML = `
+    <h2>Edit Dokumen</h2>
+
+    <form id="edit-resource-form" class="form-stack">
+      <label for="edit-title">Judul dokumen</label>
+      <input id="edit-title" type="text"
+        maxlength="200" required>
+
+      <label for="edit-course">Mata kuliah</label>
+      <input id="edit-course" type="text"
+        maxlength="200" required>
+
+      <label for="edit-type">Jenis dokumen</label>
+      <select id="edit-type" required>
+        <option value="Materi">Materi</option>
+        <option value="Tugas">Tugas</option>
+      </select>
+
+      <label for="edit-description">Deskripsi</label>
+      <textarea id="edit-description" rows="4"
+        maxlength="5000"></textarea>
+
+      <label for="edit-file">Ganti file (opsional)</label>
+      <input id="edit-file" type="file">
+      <small>
+        Kosongkan jika file lama tidak ingin diganti.
+        Maksimal 25 MB.
+      </small>
+
+      <p id="edit-status" role="status"></p>
+
+      <div class="admin-resource-actions">
+        <button class="button primary" type="submit">
+          Simpan Perubahan
+        </button>
+
+        <button class="button secondary"
+          id="cancel-edit" type="button">
+          Batal
+        </button>
+      </div>
+    </form>
+  `;
+
+  $("#edit-title").value = resource.title || "";
+  $("#edit-course").value = resource.course || "";
+  $("#edit-type").value = resource.resource_type;
+  $("#edit-description").value = resource.description || "";
+
+  $("#cancel-edit").addEventListener("click", () => {
+    dialog.close();
+  });
+
+  $("#edit-resource-form").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    if (currentUser?.id !== ADMIN_UID) {
+      setStatus("#edit-status", "Akses admin diperlukan.", "error");
+      return;
+    }
+
+    const title = $("#edit-title").value.trim();
+    const course = $("#edit-course").value.trim();
+    const resourceType = $("#edit-type").value;
+    const description = $("#edit-description").value.trim();
+    const newFile = $("#edit-file").files[0];
+
+    if (!title || !course) {
+      setStatus("#edit-status",
+        "Judul dan mata kuliah wajib diisi.", "error");
+      return;
+    }
+
+    if (!["Materi", "Tugas"].includes(resourceType)) {
+      setStatus("#edit-status",
+        "Jenis dokumen tidak valid.", "error");
+      return;
+    }
+
+    if (newFile && newFile.size > MAX_FILE_SIZE) {
+      setStatus("#edit-status",
+        "Ukuran file maksimal 25 MB.", "error");
+      return;
+    }
+
+    if (newFile && newFile.size === 0) {
+      setStatus("#edit-status",
+        "File kosong tidak dapat diunggah.", "error");
+      return;
+    }
+
+    const submitButton = $("#edit-resource-form button[type='submit']");
+    submitButton.disabled = true;
+    setStatus("#edit-status", "Menyimpan perubahan...");
+
+    let newPath = null;
+
+    try {
+      let filePath = resource.file_path;
+      let originalFilename = resource.original_filename;
+
+      // Jika pengguna memilih file baru, unggah ke path baru.
+      if (newFile) {
+        newPath =
+          `${currentUser.id}/${Date.now()}-${safeFilename(newFile.name)}`;
+
+        const { error: uploadError } = await db.storage
+          .from(BUCKET)
+          .upload(newPath, newFile, {
+            upsert: false,
+            contentType: newFile.type || "application/octet-stream"
+          });
+
+        if (uploadError) throw uploadError;
+
+        filePath = newPath;
+        originalFilename = newFile.name;
+      }
+
+      const { error: updateError } = await db
+        .from("resources")
+        .update({
+          title,
+          course,
+          resource_type: resourceType,
+          description: description || null,
+          file_path: filePath,
+          original_filename: originalFilename
+        })
+        .eq("id", id);
+
+      if (updateError) {
+        // Jika metadata gagal diperbarui, bersihkan file baru.
+        if (newPath) {
+          const { error: cleanupError } = await db.storage
+            .from(BUCKET)
+            .remove([newPath]);
+
+          if (cleanupError) {
+            console.error(
+              "File baru perlu dibersihkan:",
+              cleanupError
+            );
+          }
+        }
+
+        newPath = null;
+        throw updateError;
+      }
+
+      // Database sudah berhasil diperbarui.
+      // Sekarang file lama boleh dihapus.
+      let cleanupWarning = "";
+
+      if (newPath && resource.file_path) {
+        const { error: removeError } = await db.storage
+          .from(BUCKET)
+          .remove([resource.file_path]);
+
+        if (removeError) {
+          console.error("File lama belum terhapus:", removeError);
+          cleanupWarning =
+            " Metadata berhasil diperbarui, tetapi file lama gagal dihapus. Periksa Storage.";
+        }
+      }
+
+      dialog.close();
+
+      await loadResources();
+
+      setStatus(
+        "#admin-resource-status",
+        "Perubahan dokumen berhasil disimpan." + cleanupWarning,
+        cleanupWarning ? "error" : "success"
+      );
+    } catch (error) {
+      console.error("Edit dokumen gagal:", error);
+
+      setStatus(
+        "#edit-status",
+        error.message || "Gagal menyimpan perubahan.",
+        "error"
+      );
+    } finally {
+      if (submitButton.isConnected) {
+        submitButton.disabled = false;
+      }
+    }
+  });
+
+  if (!dialog.open) dialog.showModal();
+}
+
+
+async function deleteResource(id) {
+  if (currentUser?.id !== ADMIN_UID) {
+    setStatus("#admin-resource-status",
+      "Akses admin diperlukan.", "error");
+    return;
+  }
+
+  const resource = resourcesCache.find(
+    item => Number(item.id) === Number(id)
+  );
+
   if (!resource) return;
 
   const confirmed = window.confirm(
@@ -391,34 +632,45 @@ async function deleteResource(id) {
   setStatus("#admin-resource-status", "Menghapus dokumen...");
 
   try {
-    // Hapus objek Storage terlebih dahulu.
-    const { error: storageError } = await db.storage
-      .from(BUCKET)
-      .remove([resource.file_path]);
-
-    if (storageError) throw storageError;
-
+    // Hapus metadata dahulu.
     const { error: databaseError } = await db
       .from("resources")
       .delete()
       .eq("id", id);
 
-    if (databaseError) {
-      console.error(
-        "File sudah dihapus dari Storage tetapi metadata belum terhapus.",
-        databaseError
+    if (databaseError) throw databaseError;
+
+    // Setelah metadata terhapus, bersihkan file Storage.
+    const { error: storageError } = await db.storage
+      .from(BUCKET)
+      .remove([resource.file_path]);
+
+    await loadResources();
+
+    if (storageError) {
+      console.error("File Storage belum terhapus:", storageError);
+
+      setStatus(
+        "#admin-resource-status",
+        "Dokumen sudah dihapus dari daftar, tetapi file Storage belum berhasil dihapus. Periksa Storage secara manual.",
+        "error"
       );
-      throw new Error(
-        "File Storage terhapus, tetapi metadata gagal dihapus. Periksa policy database."
-      );
+      return;
     }
 
-    setStatus("#admin-resource-status", "Dokumen berhasil dihapus.", "success");
-    await loadResources();
+    setStatus(
+      "#admin-resource-status",
+      "Dokumen berhasil dihapus.",
+      "success"
+    );
   } catch (error) {
     console.error("Penghapusan gagal:", error);
-    setStatus("#admin-resource-status",
-      error.message || "Dokumen gagal dihapus.", "error");
+
+    setStatus(
+      "#admin-resource-status",
+      error.message || "Dokumen gagal dihapus.",
+      "error"
+    );
   }
 }
 
