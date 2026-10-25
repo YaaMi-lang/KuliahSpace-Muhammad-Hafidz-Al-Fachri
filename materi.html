@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Materi Kuliah | KuliahSpace</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <span class="brand-icon">K</span>
+      <span>KuliahSpace</span>
+    </a>
+    <nav class="navigation">
+      <a class="nav-link" href="index.html">Beranda</a>
+      <a class="nav-link active" href="materi.html">Materi</a>
+      <a class="nav-link" href="tugas.html">Tugas</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+    </nav>
+  </header>
+
+  <main class="container page-content">
+    <section class="page-heading">
+      <span class="eyebrow">PERPUSTAKAAN DIGITAL</span>
+      <h1>Materi Kuliah</h1>
+      <p>Temukan bahan pembelajaran yang kamu butuhkan.</p>
+    </section>
+
+    <section class="content-panel">
+      <div class="search-row">
+        <input id="resource-search" type="search"
+          placeholder="Cari nama materi, mata kuliah, atau deskripsi..."
+          aria-label="Cari materi">
+      </div>
+
+      <div class="list-heading">
+        <div>
+          <h2>Daftar Materi</h2>
+          <p id="resource-count">Memuat materi...</p>
+        </div>
+      </div>
+
+      <div id="resource-list" class="resource-grid"></div>
+      <p id="resource-status" class="status-message" role="status"></p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>© <span class="current-year"></span> KuliahSpace.</p>
+  </footer>
+</body>
+</html>
