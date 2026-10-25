@@ -3,239 +3,97 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#080b14">
-  <meta name="description" content="KuliahSpace - Tempat berbagi materi kuliah dan tugas mahasiswa.">
-  <title>KuliahSpace — Ruang Belajar Digital</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Beranda | KuliahSpace</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js" defer></script>
 </head>
-
 <body>
-  <header class="navbar">
-    <a class="brand" href="./">
+  <header class="site-header">
+    <a class="brand" href="index.html">
       <span class="brand-icon">K</span>
-      <span>Kuliah<span class="brand-accent">Space</span></span>
+      <span>KuliahSpace</span>
     </a>
-
-    <nav>
-      <a href="#beranda">Beranda</a>
-      <a href="#materi">Materi & Tugas</a>
-      <button id="open-admin" class="button button-outline" type="button">
-        Login Admin
-      </button>
+    <nav class="navigation">
+      <a class="nav-link active" href="index.html">Beranda</a>
+      <a class="nav-link" href="materi.html">Materi</a>
+      <a class="nav-link" href="tugas.html">Tugas</a>
+      <a class="nav-link" href="admin.html">Admin</a>
     </nav>
   </header>
 
-  <main>
-    <section class="hero" id="beranda">
-      <div class="hero-content">
-        <span class="eyebrow">
-          <span class="status-dot"></span>
-          RUANG BELAJAR DIGITAL
-        </span>
+  <main class="container">
+    <section class="hero">
+      <span class="eyebrow">RUANG BELAJAR DIGITAL</span>
+      <h1>Belajar lebih mudah bersama <span>KuliahSpace.</span></h1>
+      <p>
+        Satu tempat untuk menemukan materi perkuliahan
+        dan file tugas dengan lebih praktis.
+      </p>
+      <div class="hero-actions">
+        <a class="button primary" href="materi.html">Jelajahi Materi</a>
+        <a class="button secondary" href="tugas.html">Lihat Tugas</a>
+      </div>
+    </section>
 
-        <h1>Semua kebutuhan kuliah,<br>
-          <span class="text-gradient">dalam satu ruang.</span>
-        </h1>
+    <section class="section">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">JELAJAHI</span>
+          <h2>Apa yang kamu cari?</h2>
+          <p>Pilih halaman sesuai kebutuhanmu.</p>
+        </div>
+      </div>
 
-        <p>
-          Temukan dan unduh materi perkuliahan serta tugas dengan mudah.
-          Belajar jadi lebih terorganisir bersama KuliahSpace.
-        </p>
-
-        <a href="#materi" class="button button-primary">
-          Jelajahi Materi <span aria-hidden="true">→</span>
+      <div class="feature-grid">
+        <a class="feature-card" href="materi.html">
+          <div class="feature-icon">📚</div>
+          <h3>Materi Kuliah</h3>
+          <p>Temukan dan unduh bahan pembelajaran dari berbagai mata kuliah.</p>
+          <span class="card-link">Buka materi →</span>
         </a>
 
-        <div class="hero-stats">
-          <div>
-            <strong id="total-resources">0</strong>
-            <span>File tersedia</span>
-          </div>
-          <div>
-            <strong>24/7</strong>
-            <span>Akses kapan saja</span>
-          </div>
-        </div>
-      </div>
+        <a class="feature-card" href="tugas.html">
+          <div class="feature-icon">📝</div>
+          <h3>Tugas Kuliah</h3>
+          <p>Akses file tugas yang tersedia agar lebih mudah dipelajari.</p>
+          <span class="card-link">Buka tugas →</span>
+        </a>
 
-      <div class="hero-visual" aria-hidden="true">
-        <div class="orbit orbit-one"></div>
-        <div class="orbit orbit-two"></div>
-        <div class="hero-card">
-          <div class="hero-card-icon">▤</div>
-          <span class="hero-card-label">YOUR LEARNING SPACE</span>
-          <h2>Learn.<br>Organize.<br><span>Grow.</span></h2>
-          <div class="hero-card-line"></div>
-          <p>One space for your academic journey.</p>
-        </div>
-        <div class="floating-badge badge-top">✦ Materi Kuliah</div>
-        <div class="floating-badge badge-bottom">↗ Akses Mudah</div>
+        <a class="feature-card" href="admin.html">
+          <div class="feature-icon">🔐</div>
+          <h3>Panel Admin</h3>
+          <p>Halaman pengelolaan dokumen untuk admin yang berwenang.</p>
+          <span class="card-link">Masuk admin →</span>
+        </a>
       </div>
     </section>
 
-    <section class="resources-section" id="materi">
+    <section class="section">
       <div class="section-heading">
         <div>
-          <span class="eyebrow">PUSAT DOKUMEN</span>
-          <h2>Materi & <span class="text-gradient">Tugas</span></h2>
-          <p>Jelajahi dokumen perkuliahan yang tersedia.</p>
+          <span class="eyebrow">RINGKASAN</span>
+          <h2>Koleksi KuliahSpace</h2>
+          <p>Jumlah dokumen yang tersedia saat ini.</p>
         </div>
       </div>
-
-      <div class="resource-tools">
-        <label class="search-box">
-          <span aria-hidden="true">⌕</span>
-          <input
-            id="search-input"
-            type="search"
-            placeholder="Cari materi, tugas, atau mata kuliah..."
-            aria-label="Cari dokumen"
-          >
-        </label>
-
-        <select id="type-filter" aria-label="Filter jenis dokumen">
-          <option value="">Semua jenis</option>
-          <option value="Materi">Materi</option>
-          <option value="Tugas">Tugas</option>
-        </select>
-
-        <select id="course-filter" aria-label="Filter mata kuliah">
-          <option value="">Semua mata kuliah</option>
-        </select>
-      </div>
-
-      <div id="resource-status" class="status-message" role="status">
-        Memuat daftar dokumen...
-      </div>
-
-      <div id="resource-list" class="resource-grid"></div>
-    </section>
-
-    <section id="admin-section" class="admin-section hidden">
-      <div class="section-heading">
-        <div>
-          <span class="eyebrow">PENGELOLAAN DOKUMEN</span>
-          <h2>Panel <span class="text-gradient">Admin</span></h2>
-          <p>Unggah dan kelola materi perkuliahanmu.</p>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Total Materi</span>
+          <strong id="home-material-count">—</strong>
         </div>
-        <button id="logout-button" class="button button-outline" type="button">
-          Keluar
-        </button>
+        <div class="stat-card">
+          <span class="stat-label">Total Tugas</span>
+          <strong id="home-task-count">—</strong>
+        </div>
       </div>
-
-      <div class="admin-card">
-        <h3>Unggah dokumen baru</h3>
-
-        <form id="upload-form">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="resource-title">Judul dokumen *</label>
-              <input
-                id="resource-title"
-                name="title"
-                type="text"
-                placeholder="Contoh: Modul Jaringan Komputer"
-                required
-                maxlength="150"
-              >
-            </div>
-
-            <div class="form-group">
-              <label for="resource-course">Mata kuliah *</label>
-              <input
-                id="resource-course"
-                name="course"
-                type="text"
-                placeholder="Contoh: Jaringan Komputer"
-                required
-                maxlength="100"
-              >
-            </div>
-
-            <div class="form-group">
-              <label for="resource-type">Jenis dokumen *</label>
-              <select id="resource-type" name="resource_type" required>
-                <option value="Materi">Materi</option>
-                <option value="Tugas">Tugas</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="resource-file">Pilih file *</label>
-              <input id="resource-file" name="file" type="file" required>
-              <small>PDF, dokumen Office, teks, ZIP, atau gambar yang diizinkan.</small>
-            </div>
-
-            <div class="form-group form-full">
-              <label for="resource-description">Deskripsi</label>
-              <textarea
-                id="resource-description"
-                name="description"
-                rows="3"
-                placeholder="Keterangan singkat tentang dokumen ini..."
-                maxlength="1000"
-              ></textarea>
-            </div>
-          </div>
-
-          <button id="upload-button" class="button button-primary" type="submit">
-            ↑ Unggah Dokumen
-          </button>
-          <p id="upload-status" class="status-message" role="status"></p>
-        </form>
-      </div>
-
-      <div class="admin-card">
-        <h3>Kelola dokumen</h3>
-        <p class="muted">Dokumen yang tersedia di website.</p>
-        <div id="admin-resource-list"></div>
-      </div>
+      <p id="home-status" class="status-message" role="status"></p>
     </section>
   </main>
 
-  <footer class="footer">
-    <a class="brand" href="#beranda">
-      <span class="brand-icon">K</span>
-      <span>Kuliah<span class="brand-accent">Space</span></span>
-    </a>
-    <p>Ruang belajar digital untuk perjalanan akademikmu.</p>
-    <span>© <span id="current-year"></span> KuliahSpace</span>
+  <footer class="site-footer">
+    <p>© <span class="current-year"></span> KuliahSpace · Ruang belajar mahasiswa.</p>
   </footer>
-
-  <dialog id="login-dialog" class="login-dialog">
-    <div class="dialog-heading">
-      <div>
-        <span class="eyebrow">AREA KHUSUS</span>
-        <h2>Login Admin</h2>
-        <p>Masuk untuk mengelola dokumen KuliahSpace.</p>
-      </div>
-      <button id="close-login" class="close-button" type="button"
-        aria-label="Tutup">×</button>
-    </div>
-
-    <form id="login-form">
-      <div class="form-group">
-        <label for="admin-email">Email admin</label>
-        <input id="admin-email" type="email" autocomplete="username"
-          placeholder="Email akun Supabase" required>
-      </div>
-
-      <div class="form-group">
-        <label for="admin-password">Password</label>
-        <input id="admin-password" type="password"
-          autocomplete="current-password" placeholder="Password admin" required>
-      </div>
-
-      <button id="login-button" class="button button-primary button-full"
-        type="submit">Masuk</button>
-      <p id="login-status" class="status-message" role="status"></p>
-    </form>
-  </dialog>
-
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
