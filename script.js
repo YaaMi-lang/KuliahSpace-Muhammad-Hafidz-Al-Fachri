@@ -364,13 +364,30 @@ async function handleUpload(event) {
     $("#upload-form").reset();
     setStatus("#upload-status", "Dokumen berhasil diunggah!", "success");
     await loadResources();
-  } catch (error) {
-    console.error("Upload gagal:", error);
-    setStatus("#upload-status",
-      error.message || "Upload gagal. Periksa koneksi atau izin Supabase.", "error");
-  } finally {
-    if (submitButton) submitButton.disabled = false;
-  }
+ 
+    } catch (error) {
+      console.error("Upload gagal:", error);
+    
+      if (
+        error.code === "23505" ||
+        error.message?.toLowerCase().includes("sudah ditambahkan")
+      ) {
+        setStatus(
+          "#upload-status",
+          `${resourceType} sudah ditambahkan untuk mata kuliah ${course}. Periksa dokumen yang sudah ada sebelum mengunggah ulang.`,
+          "error"
+        );
+      } else {
+        setStatus(
+          "#upload-status",
+          error.message || "Upload gagal. Silakan coba lagi.",
+          "error"
+        );
+      }
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+
 }
 
 async function deleteResource(id) {
