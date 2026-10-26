@@ -336,6 +336,47 @@ async function handleUpload(event) {
     return;
   }
 
+  // Periksa apakah judul, mata kuliah, dan jenis sudah ada.
+  setStatus("#upload-status", "Memeriksa dokumen...");
+
+  try {
+    const { data: existingResources, error: checkError } = await db
+      .from("resources")
+      .select("id, title, course, resource_type")
+      .ilike("title", title)
+      .ilike("course", course)
+      .eq("resource_type", resourceType);
+
+    if (checkError) throw checkError;
+
+    const normalize = value =>
+      String(value || "").trim().toLocaleLowerCase();
+
+    const duplicate = (existingResources || []).some(item =>
+      normalize(item.title) === normalize(title) &&
+      normalize(item.course) === normalize(course) &&
+      item.resource_type === resourceType
+    );
+
+    if (duplicate) {
+      setStatus(
+        "#upload-status",
+        `${resourceType} sudah ditambahkan untuk mata kuliah ${course}. Gunakan dokumen yang sudah ada atau ubah judulnya jika memang berbeda.`,
+        "error"
+      );
+      return;
+    }
+  } catch (error) {
+    console.error("Pemeriksaan duplikat gagal:", error);
+
+    setStatus(
+      "#upload-status",
+      "Tidak dapat memeriksa dokumen yang sudah ada. Upload dibatalkan demi keamanan. Coba lagi.",
+      "error"
+    );
+    return;
+  }
+
   const submitButton = $("#upload-form button[type='submit']");
   if (submitButton) submitButton.disabled = true;
 
@@ -378,11 +419,22 @@ async function handleUpload(event) {
     $("#upload-form").reset();
     setStatus("#upload-status", "Dokumen berhasil diunggah!", "success");
     await loadResources();
-  } catch (error) {
-    console.error("Upload gagal:", error);
-    setStatus("#upload-status",
-      error.message || "Upload gagal. Periksa koneksi atau izin Supabase.", "error");
-  } finally {
+  if (
+  error.code === "23505" ||
+  error.message?.toLowerCase().includes("sudah ditambahkan")
+) {
+  setStatus(
+    "#upload-status",
+    `${resourceType} sudah ditambahkan untuk mata kuliah ${course}. Periksa dokumen yang sudah ada sebelum mengunggah ulang.`,
+    "error"
+  );
+} else {
+  setStatus(
+    "#upload-status",
+    error.message || "Upload gagal. Silakan coba lagi.",
+    "error"
+  );
+}
     if (submitButton) submitButton.disabled = false;
   }
 }
