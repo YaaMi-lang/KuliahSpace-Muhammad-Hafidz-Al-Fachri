@@ -499,3 +499,14 @@ textarea::placeholder {
   margin-top: 12px;
   opacity: 0.8;
 }
+.resource-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.resource-actions .button {
+  text-decoration: none;
+  text-align: center;
+}
