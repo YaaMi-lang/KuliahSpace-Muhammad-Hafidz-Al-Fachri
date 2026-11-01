@@ -49,8 +49,13 @@ function formatDate(value) {
   });
 }
 
-function getPublicFileUrl(path) {
-  const { data } = db.storage.from(BUCKET).getPublicUrl(path);
+function getPublicFileUrl(path, download = false) {
+  const { data } = db.storage
+    .from(BUCKET)
+    .getPublicUrl(path, {
+      download: download || false
+    });
+
   return data.publicUrl;
 }
 
@@ -69,7 +74,8 @@ function renderResourceCard(resource, adminMode = false) {
   const description = escapeHTML(resource.description || "Tidak ada deskripsi.");
   const type = escapeHTML(resource.resource_type);
   const filename = escapeHTML(resource.original_filename);
-  const url = getPublicFileUrl(resource.file_path);
+  const previewUrl = getPublicFileUrl(resource.file_path);
+  const downloadUrl = getPublicFileUrl(resource.file_path, true);
 
   return `
     <article class="resource-card">
@@ -81,12 +87,19 @@ function renderResourceCard(resource, adminMode = false) {
         File: ${filename}<br>
         Diunggah: ${formatDate(resource.uploaded_at)}
       </p>
-      <a class="button primary"
-         href="${escapeHTML(url)}"
-         target="_blank"
-         rel="noopener noreferrer">
-        Unduh / Buka File
-      </a>
+      <div class="resource-actions">
+        <a class="button primary"
+           href="${escapeHTML(previewUrl)}"
+           target="_blank"
+           rel="noopener noreferrer">
+          Lihat File
+        </a>
+      
+        <a class="button secondary"
+           href="${escapeHTML(downloadUrl)}">
+          Unduh File
+        </a>
+      </div>
       ${
         adminMode
           ? `<div class="admin-resource-actions">
