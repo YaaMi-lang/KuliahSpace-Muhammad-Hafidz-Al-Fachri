@@ -68,41 +68,80 @@ function getCurrentPage() {
   return "Beranda";
 }
 
+
 function renderResourceCard(resource, adminMode = false) {
   const title = escapeHTML(resource.title);
   const course = escapeHTML(resource.course);
-  const description = escapeHTML(resource.description || "Tidak ada deskripsi.");
+  const description = escapeHTML(
+    resource.description || "Tidak ada deskripsi."
+  );
   const type = escapeHTML(resource.resource_type);
   const filename = escapeHTML(resource.original_filename);
+
   const previewUrl = getPublicFileUrl(resource.file_path);
   const downloadUrl = getPublicFileUrl(resource.file_path, true);
+
+  // Deteksi ekstensi file.
+  const extension = (
+    resource.original_filename.split(".").pop() || ""
+  ).toLowerCase();
+
+  const officeExtensions = [
+    "doc", "docx",
+    "ppt", "pptx",
+    "xls", "xlsx"
+  ];
+
+  let viewerUrl = previewUrl;
+  let previewLabel = "Lihat File";
+
+  if (officeExtensions.includes(extension)) {
+    viewerUrl =
+      "https://view.officeapps.live.com/op/view.aspx?src=" +
+      encodeURIComponent(previewUrl);
+
+    previewLabel = "Preview Dokumen";
+  }
 
   return `
     <article class="resource-card">
       <span class="resource-type">${type}</span>
+
       <h3>${title}</h3>
-      <p class="resource-meta">Mata kuliah: ${course}</p>
+
+      <p class="resource-meta">
+        Mata kuliah: ${course}
+      </p>
+
       <p>${description}</p>
+
       <p class="resource-meta">
         File: ${filename}<br>
         Diunggah: ${formatDate(resource.uploaded_at)}
       </p>
+
       <div class="resource-actions">
         <a class="button primary"
-           href="${escapeHTML(previewUrl)}"
+           href="${escapeHTML(viewerUrl)}"
            target="_blank"
            rel="noopener noreferrer">
-          Lihat File
+          ${previewLabel}
         </a>
-      
+
         <a class="button secondary"
            href="${escapeHTML(downloadUrl)}">
           Unduh File
         </a>
       </div>
+
       ${
         adminMode
           ? `<div class="admin-resource-actions">
+               <button class="button primary edit-resource"
+                 type="button" data-id="${Number(resource.id)}">
+                 Edit Dokumen
+               </button>
+
                <button class="button secondary delete-resource"
                  type="button" data-id="${Number(resource.id)}">
                  Hapus Dokumen
@@ -113,6 +152,7 @@ function renderResourceCard(resource, adminMode = false) {
     </article>
   `;
 }
+
 
 async function loadResources() {
   const page = getCurrentPage();
