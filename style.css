@@ -581,3 +581,31 @@ textarea::placeholder {
     object-position: center;
   }
 }
+
+/* TOMBOL MUSIK HERO */
+.audio-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  background: rgba(10, 18, 35, 0.65);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: 0.2s ease;
+}
+
+.audio-toggle:hover {
+  background: rgba(85, 147, 255, 0.35);
+  border-color: #8bb7ff;
+}
+
+.audio-toggle:focus-visible {
+  outline: 2px solid #8bb7ff;
+  outline-offset: 3px;
+}
