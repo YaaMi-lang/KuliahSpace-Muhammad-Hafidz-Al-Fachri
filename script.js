@@ -562,24 +562,34 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // KONTROL MUSIK BACKGROUND HERO
+
+// KONTROL MUSIK BACKGROUND HERO
 const heroVideo = document.querySelector(".hero-background");
 const audioToggle = document.querySelector("#hero-audio-toggle");
 
 if (heroVideo && audioToggle) {
-  audioToggle.addEventListener("click", async () => {
+  // Pastikan video dimulai tanpa suara
+  heroVideo.muted = true;
+  heroVideo.volume = 0.35;
+
+  audioToggle.addEventListener("click", () => {
     if (heroVideo.muted) {
       heroVideo.muted = false;
       heroVideo.volume = 0.35;
 
-      try {
-        await heroVideo.play();
+      // Pastikan video tetap berjalan
+      const playPromise = heroVideo.play();
 
-        audioToggle.textContent = "🔊 Matikan Musik";
-        audioToggle.setAttribute("aria-pressed", "true");
-      } catch (error) {
-        heroVideo.muted = true;
-        audioToggle.textContent = "🔇 Aktifkan Musik";
-        audioToggle.setAttribute("aria-pressed", "false");
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          audioToggle.textContent = "🔊 Matikan Musik";
+          audioToggle.setAttribute("aria-pressed", "true");
+        }).catch((error) => {
+          console.error("Gagal memutar audio:", error);
+          heroVideo.muted = true;
+          audioToggle.textContent = "🔇 Aktifkan Musik";
+          audioToggle.setAttribute("aria-pressed", "false");
+        });
       }
     } else {
       heroVideo.muted = true;
@@ -587,4 +597,6 @@ if (heroVideo && audioToggle) {
       audioToggle.setAttribute("aria-pressed", "false");
     }
   });
+}
+
 }
