@@ -560,3 +560,31 @@ document.addEventListener("DOMContentLoaded", () => {
     setStatus("#login-status", "Gagal menginisialisasi halaman.", "error");
   });
 });
+
+// KONTROL MUSIK BACKGROUND HERO
+const heroVideo = document.querySelector(".hero-background");
+const audioToggle = document.querySelector("#hero-audio-toggle");
+
+if (heroVideo && audioToggle) {
+  audioToggle.addEventListener("click", async () => {
+    if (heroVideo.muted) {
+      heroVideo.muted = false;
+      heroVideo.volume = 0.35;
+
+      try {
+        await heroVideo.play();
+
+        audioToggle.textContent = "🔊 Matikan Musik";
+        audioToggle.setAttribute("aria-pressed", "true");
+      } catch (error) {
+        heroVideo.muted = true;
+        audioToggle.textContent = "🔇 Aktifkan Musik";
+        audioToggle.setAttribute("aria-pressed", "false");
+      }
+    } else {
+      heroVideo.muted = true;
+      audioToggle.textContent = "🔇 Aktifkan Musik";
+      audioToggle.setAttribute("aria-pressed", "false");
+    }
+  });
+}
