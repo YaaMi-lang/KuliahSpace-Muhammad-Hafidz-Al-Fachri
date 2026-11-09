@@ -598,5 +598,3 @@ if (heroVideo && audioToggle) {
     }
   });
 }
-
-}
