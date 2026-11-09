@@ -561,9 +561,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// KONTROL MUSIK BACKGROUND HERO
-
-// KONTROL MUSIK BACKGROUND HERO
+ // KONTROL MUSIK BACKGROUND HERO
 const heroVideo = document.querySelector(".hero-background");
 const audioToggle = document.querySelector("#hero-audio-toggle");
 
@@ -577,7 +575,6 @@ if (heroVideo && audioToggle) {
       heroVideo.muted = false;
       heroVideo.volume = 0.35;
 
-      // Pastikan video tetap berjalan
       const playPromise = heroVideo.play();
 
       if (playPromise !== undefined) {
